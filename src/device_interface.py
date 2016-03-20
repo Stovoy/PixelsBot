@@ -2,28 +2,15 @@ import os
 import sys
 import subprocess
 
-from com.android.monkeyrunner import MonkeyRunner
+from com.android.monkeyrunner import MonkeyRunner, MonkeyDevice
 
 
-
-def do_snapshot(device, image_format='png'):
-    """Takes a snapshot and prints it to stdout as bytes.
-
-    Args:
-        device: MonkeyDevice object.
-        image_format: Format for the image.
-    """
-    os.system('adb pull /sys/devices/virtual/graphics/fb0 image')
-    subprocess.call('ffmpeg -vframes 1 -vcodec rawvideo -loglevel quiet -f  rawvideo -pix_fmt rgba -s 480x854 -i image -f image2 -vcodec png image.png')
-
-    #snapshot = device.takeSnapshot()
-    print '<output start>'
-    #print snapshot.convertToBytes()
-    print '<output done>'
+def do_click(device):
+    device.touch(200, 200, MonkeyDevice.DOWN_AND_UP)
 
 # Define the commands.
 commands = {
-    'snapshot': do_snapshot
+    'click': do_click
 }
 
 
@@ -39,21 +26,31 @@ def do_command(command, device):
     else:
         raise ValueError()
 
+
+class Unbuffered(object):
+
+    def __init__(self, stream):
+        self.stream = stream
+
+    def write(self, data):
+        self.stream.write(data)
+        self.stream.flush()
+
+    def __getattr__(self, attr):
+        return getattr(self.stream, attr)
+
+
 if __name__ == '__main__':
+    # sys.stdout = Unbuffered(sys.stdout)
+
     device = MonkeyRunner.waitForConnection()
 
-    print device.takeSnapshot()
-    print device.takeSnapshot()
-    print device.takeSnapshot()
-    print device.takeSnapshot()
-    sys.exit(0)
     while True:
         command = raw_input('ready> ')
+        if command == 'stop':
+            break
         try:
             do_command(command, device)
         except ValueError:
             print 'Invalid command: %s' % command
-            break
-        except Exception:
-            print 'Exception'
             break

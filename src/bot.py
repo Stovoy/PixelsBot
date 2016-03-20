@@ -1,26 +1,18 @@
-import argparse
 import os
 import pexpect
+import pexpect.popen_spawn
 import sys
 
-
-parser = argparse.ArgumentParser(description='Run PixelsBot.')
+import ui
 
 _process = None
 
-OUTPUT_START = '<output start>\r\n'
-OUTPUT_DONE = '<output done>\r\n'
 READY = 'ready> '
 
 
-def device_snapshot():
-    """Takes a snapshot."""
-    data = device_communicate('snapshot')
-    prefix = 'array(\'b\', '
-    if not data.startswith(prefix):
-        print 'Could not parse snapshot data.'
-    else:
-        print len(data[len(prefix):])
+def device_click():
+    """Makes a click on the device."""
+    device_communicate('click')
 
 
 def device_communicate(message):
@@ -29,8 +21,6 @@ def device_communicate(message):
     Sends a message over stdin.
     Args:
         message: Message to send to device interface.
-
-    Returns: stdout from the device interface.
     """
     global _process
     if not _process:
@@ -38,31 +28,27 @@ def device_communicate(message):
 
     print 'Sending command: %s' % message
     _process.sendline(message)
-    print 'Waiting for %s...' % OUTPUT_START
-    _process.expect(OUTPUT_START)
-    print 'Waiting for %s...' % OUTPUT_DONE
-    _process.expect(OUTPUT_DONE)
-    output = _process.before
-    print 'Waiting for %s...' % READY
-    _process.expect(READY)
-    return output
+    wait_ready()
 
 
 def _start_communication():
     """Starts communication via device_interface.py"""
+    print 'Make sure your Android phone is connected and given USB debug permissions.'
     working_dir = os.getcwd()
     # TODO: Make this more generic.
-    cmd = 'monkeyrunner %s/src/device_interface.py' % working_dir
+    cmd = ['monkeyrunner.bat',  '%s\src\device_interface.py' % working_dir]
     global _process
-    _process = pexpect.spawn(cmd)
-    print 'Waiting for ready...'
+    _process = pexpect.popen_spawn.PopenSpawn(cmd)
+    wait_ready()
+
+
+def wait_ready():
+    global _process
+    print 'Waiting for %s...' % READY
     _process.expect(READY)
 
 
 if __name__ == '__main__':
-    args = parser.parse_args()
+    # device_click()
 
-    device_snapshot()
-    device_snapshot()
-    device_snapshot()
-    device_snapshot()
+    ui.start()
